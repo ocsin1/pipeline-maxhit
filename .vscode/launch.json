@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug pipeline-maxhit",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/install",
+            "args": [
+                "-pipeline", "assets/resource/pipeline",
+                "-entry", "OpenGame",
+                "-defaults", "assets/resource/default_pipeline.json"
+            ],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
