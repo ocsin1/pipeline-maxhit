@@ -308,6 +308,11 @@ func ParseNextForTest(raw json.RawMessage) ([]NextItem, error) {
 	return parseNextList(raw)
 }
 
+// ParseActionTypeForTest is a test helper that extracts action type string.
+func ParseActionTypeForTest(raw json.RawMessage) string {
+	return parseActionType(raw)
+}
+
 // ClassifyRecogForTest is a test helper.
 func ClassifyRecogForTest(n *NodeData) RecogClass {
 	return classifyRecog(n)

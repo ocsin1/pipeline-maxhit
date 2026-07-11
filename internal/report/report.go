@@ -3,7 +3,6 @@ package report
 import (
 	"fmt"
 	"io"
-	"math"
 	"sort"
 	"strings"
 
@@ -16,36 +15,83 @@ type TaskResult struct {
 	Results []solver.ExecResult
 }
 
-func Print(w io.Writer, tasks []TaskResult, sccWarnings []string) {
-	printWarnings(w, sccWarnings)
+// PrintOptions controls output formatting.
+type PrintOptions struct {
+	ShowAllNodes bool // include unreachable nodes
+	ShowSCC      bool // print SCC warnings
+}
+
+// Print writes formatted results for one or more tasks.
+// reachableByTask maps task name → set of reachable node names (for SCC filtering).
+func Print(w io.Writer, tasks []TaskResult, sccWarnings []string, reachableByTask map[string]map[string]bool, opts PrintOptions) {
+	if opts.ShowSCC {
+		printSCCWarnings(w, sccWarnings, reachableByTask, tasks)
+	}
 
 	for ti, tr := range tasks {
 		if len(tasks) > 1 {
 			fmt.Fprintf(w, "\n### %s (entry: %s)\n\n", tr.Name, tr.Entry)
 		}
-		printOneTask(w, tr)
+		printOneTask(w, tr, opts)
 		if ti < len(tasks)-1 {
 			fmt.Fprintln(w)
 		}
 	}
 }
 
-func printWarnings(w io.Writer, warnings []string) {
-	if len(warnings) == 0 {
+// printSCCWarnings shows SCC warnings filtered to nodes reachable in any task.
+func printSCCWarnings(w io.Writer, warnings []string, reachableByTask map[string]map[string]bool, tasks []TaskResult) {
+	// Collect union of all reachable node names across tasks.
+	allReachable := make(map[string]bool)
+	for _, tr := range tasks {
+		for _, r := range tr.Results {
+			if r.Reachable {
+				allReachable[r.Name] = true
+			}
+		}
+	}
+
+	// For each SCC warning, check if any node in the SCC is reachable.
+	var relevant []string
+	for _, warn := range warnings {
+		if sccOverlaps(warn, allReachable) {
+			relevant = append(relevant, warn)
+		}
+	}
+	if len(relevant) == 0 {
 		return
 	}
-	for _, warn := range warnings {
+	for _, warn := range relevant {
 		fmt.Fprintf(w, "⚠  %s\n", warn)
 	}
 	fmt.Fprintln(w)
 }
 
-func printOneTask(w io.Writer, tr TaskResult) {
-	sorted := sortResults(tr.Results)
+// sccOverlaps checks if any node mentioned in the warning is in the reachable set.
+func sccOverlaps(warn string, reachable map[string]bool) bool {
+	// Warning format: "SCC with unbounded max_hit: NodeA, NodeB, ..."
+	prefix := "SCC with unbounded max_hit: "
+	idx := strings.Index(warn, prefix)
+	if idx < 0 {
+		return true // unexpected format — show it
+	}
+	nodes := warn[idx+len(prefix):]
+	for _, name := range strings.Split(nodes, ", ") {
+		name = strings.TrimSpace(name)
+		if reachable[name] {
+			return true
+		}
+	}
+	return false
+}
+
+func printOneTask(w io.Writer, tr TaskResult, opts PrintOptions) {
 	total, reachable, zero := countStats(tr.Results)
 
 	fmt.Fprintf(w, "节点总数: %d  可达: %d  零执行: %d\n\n", total, reachable, zero)
-	printTable(w, sorted)
+
+	sorted := sortResults(tr.Results)
+	printTable(w, sorted, opts)
 }
 
 func sortResults(results []solver.ExecResult) []solver.ExecResult {
@@ -73,20 +119,22 @@ func countStats(results []solver.ExecResult) (total, reachable, zero int) {
 	return
 }
 
-func printTable(w io.Writer, sorted []solver.ExecResult) {
-	fmt.Fprintf(w, "%-55s %12s %12s %s\n", "节点", "MaxHit", "MaxExec", "来源")
-	fmt.Fprintf(w, "%s\n", strings.Repeat("─", 95))
-	for _, r := range sorted {
-		fmt.Fprintf(w, "%-55s %12s %12s %s\n",
-			truncate(r.Name, 55), formatMaxHit(r.MaxHit), formatExec(r.Exec), r.Source)
-	}
-}
+func printTable(w io.Writer, sorted []solver.ExecResult, opts PrintOptions) {
+	fmt.Fprintf(w, "%-55s %12s %s\n", "节点", "MaxExec", "来源")
+	fmt.Fprintf(w, "%s\n", strings.Repeat("─", 80))
 
-func formatMaxHit(mh uint64) string {
-	if mh >= math.MaxUint32 {
-		return "UINT_MAX"
+	printed := 0
+	for _, r := range sorted {
+		if !opts.ShowAllNodes && !r.Reachable {
+			continue
+		}
+		fmt.Fprintf(w, "%-55s %12s %s\n",
+			truncate(r.Name, 55), formatExec(r.Exec), r.Source)
+		printed++
 	}
-	return fmt.Sprintf("%d", mh)
+	if printed == 0 {
+		fmt.Fprintln(w, "(无可达节点)")
+	}
 }
 
 func formatExec(e int64) string {

@@ -61,7 +61,14 @@ func (g *Graph) buildEdges(from string, items []pipeline.NextItem, normalKind, j
 
 func (g *Graph) shouldSkipEdge(item pipeline.NextItem) bool {
 	target, ok := g.Nodes[item.Name]
-	return ok && target.Pipeline.RecogClass == pipeline.RecogInvisible
+	if !ok {
+		return false
+	}
+	// FW line 298-301: disabled nodes are skipped in next list scan.
+	if !target.Pipeline.Enabled {
+		return true
+	}
+	return target.Pipeline.RecogClass == pipeline.RecogInvisible
 }
 
 // --- StopTask handling ---
@@ -195,6 +202,10 @@ func (g *Graph) ReapplyBlockerPreprocessing() { g.applyBlockerPreprocessing() }
 
 func (g *Graph) computeReachability() {
 	visited := make(map[string]bool)
+	entryInfo := g.Nodes[g.Entry]
+	if g.Entry == "" || entryInfo == nil || !entryInfo.Pipeline.Enabled {
+		return // entry disabled or missing → nothing reachable
+	}
 	queue := []string{g.Entry}
 	visited[g.Entry] = true
 
@@ -203,6 +214,11 @@ func (g *Graph) computeReachability() {
 		queue = queue[1:]
 		for _, e := range g.OutEdges[cur] {
 			if visited[e.To] {
+				continue
+			}
+			// FW line 298-301: disabled nodes are skipped.
+			destInfo := g.Nodes[e.To]
+			if destInfo != nil && !destInfo.Pipeline.Enabled {
 				continue
 			}
 			visited[e.To] = true

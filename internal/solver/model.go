@@ -214,13 +214,11 @@ func computeCanReachLeaf(g *graph.Graph, reachable map[string]bool) map[string]b
 }
 
 func needsSinkEdge(g *graph.Graph, name string, reachable, canReachLeaf map[string]bool) bool {
-	if name == g.Entry {
-		return false
-	}
 	if !hasNormalOutgoing(g, name, reachable) {
 		return true // leaf always gets T edge
 	}
-	// Non-leaf node: needs T-edge only if it can't reach a leaf through children.
+	// Non-leaf node: needs T-edge only if flow can't reach a leaf through children.
+	// This includes the entry node when all its children are saturated (e.g. by JB supply).
 	return !canReachLeaf[name]
 }
 

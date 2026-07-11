@@ -22,8 +22,29 @@ func main() {
 	base := parseBasePipeline(cfg)
 	allFinal := runAllTasks(base, cfg)
 
-	sccWarnings := solver.FindSCCs(graph.Build(base, allFinal[0].Entry)).Warnings
-	report.Print(os.Stdout, allFinal, sccWarnings)
+	// Compute SCC warnings (global, filtered per task at print time).
+	var sccWarnings []string
+	if len(allFinal) > 0 {
+		sccWarnings = solver.FindSCCs(graph.Build(base, allFinal[0].Entry)).Warnings
+	}
+
+	// Collect reachable nodes per task for SCC filtering.
+	reachableByTask := make(map[string]map[string]bool)
+	for _, tr := range allFinal {
+		names := make(map[string]bool)
+		for _, r := range tr.Results {
+			if r.Reachable {
+				names[r.Name] = true
+			}
+		}
+		reachableByTask[tr.Name] = names
+	}
+
+	opts := report.PrintOptions{
+		ShowAllNodes: cfg.showAllNodes,
+		ShowSCC:      cfg.showSCC,
+	}
+	report.Print(os.Stdout, allFinal, sccWarnings, reachableByTask, opts)
 }
 
 // --- task plan ---
@@ -39,13 +60,15 @@ type taskPlan struct {
 // --- config ---
 
 type config struct {
-	pipelineDir string
-	defaults    string
-	entry       string
-	taskFiles   []string // paths to task JSON files (or directories)
-	taskNames   []string
-	allTasks    bool
-	allDirs     bool // scan all task files in directories
+	pipelineDir  string
+	defaults     string
+	entry        string
+	taskFiles    []string // paths to task JSON files (or directories)
+	taskNames    []string
+	allTasks     bool
+	allDirs      bool // scan all task files in directories
+	showAllNodes bool // include unreachable nodes in output
+	showSCC      bool // print SCC warnings
 }
 
 func parseFlags() *config {
@@ -56,6 +79,8 @@ func parseFlags() *config {
 	taskName := flag.String("task-name", "", "任务名，逗号分隔，\"all\" 运行全部")
 	allTasks := flag.Bool("all-tasks", false, "运行所有任务文件中的所有任务")
 	listTasks := flag.Bool("list-tasks", false, "列出任务后退出")
+	allNodes := flag.Bool("all-nodes", false, "显示全部节点（含不可达）")
+	noSCC := flag.Bool("no-scc", false, "不显示 SCC 警告")
 	flag.Parse()
 
 	if *task != "" && *listTasks {
@@ -64,10 +89,12 @@ func parseFlags() *config {
 	}
 
 	cfg := &config{
-		pipelineDir: *pipelineDir,
-		defaults:    *defaults,
-		entry:       *entry,
-		allDirs:     *allTasks,
+		pipelineDir:  *pipelineDir,
+		defaults:     *defaults,
+		entry:        *entry,
+		allDirs:      *allTasks,
+		showAllNodes: *allNodes,
+		showSCC:      !*noSCC,
 	}
 
 	if *task != "" {
