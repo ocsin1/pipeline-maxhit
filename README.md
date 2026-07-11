@@ -1,5 +1,7 @@
 # Pipeline MaxHit
 
+> ⚠️ **纯 Vibe 项目** — 全部代码由 Claude (Anthropic) 生成，无手写。
+
 计算 MAA Framework Pipeline 中每个节点在一个任务中的**理论最大执行次数**。
 
 ## 原理
