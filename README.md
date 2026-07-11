@@ -32,7 +32,7 @@ go install github.com/ocsin1/pipeline-maxhit@latest
 git clone https://github.com/ocsin1/pipeline-maxhit
 cd pipeline-maxhit
 mkdir -p install
-go build -o install/pipeline-maxhit .
+go build -o install/pipeline-maxhit.exe .
 ```
 
 Go 1.22+，无外部依赖。
