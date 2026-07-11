@@ -1,0 +1,11 @@
+{
+    "name": "pipeline-maxhit",
+    "private": true,
+    "scripts": {
+        "fmt": "prettier --write .",
+        "fmt:check": "prettier --check ."
+    },
+    "devDependencies": {
+        "prettier": "^3.6.0"
+    }
+}

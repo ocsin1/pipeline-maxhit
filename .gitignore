@@ -1,5 +1,7 @@
 # Binary
 /install/
+/pipeline-maxhit
+/pipeline-maxhit.exe
 
 # IDE
 .idea/

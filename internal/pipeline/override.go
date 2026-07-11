@@ -27,7 +27,7 @@ func ParseTaskFile(path string) (*TaskFile, error) {
 	}
 	var tf TaskFile
 	if err := json.Unmarshal(data, &tf); err != nil {
-		return nil, fmt.Errorf("parsing task file: %w", path, err)
+		return nil, fmt.Errorf("parsing task file %s: %w", path, err)
 	}
 	return &tf, nil
 }

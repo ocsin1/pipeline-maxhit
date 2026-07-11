@@ -1,0 +1,8 @@
+# Binary
+/install/
+
+# Go (handled by gofmt)
+*.go
+
+# Generated
+go.sum

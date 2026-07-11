@@ -1,0 +1,26 @@
+{
+    "proseWrap": "preserve",
+    "singleQuote": true,
+    "trailingComma": "all",
+    "overrides": [
+        {
+            "files": "*.md",
+            "options": {
+                "proseWrap": "preserve"
+            }
+        },
+        {
+            "files": "*.{yml,yaml}",
+            "options": {
+                "singleQuote": false
+            }
+        },
+        {
+            "files": "*.go",
+            "options": {
+                "parser": "empty",
+                "requirePragma": true
+            }
+        }
+    ]
+}

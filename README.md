@@ -9,7 +9,7 @@
 ### 处理的约束
 
 | 约束 | 说明 |
-|------|------|
+| ------ | ------ |
 | `max_hit` | 节点容量上限 |
 | `next` / `on_error` | 有向边（成功 / 失败跳转） |
 | `jump_back` | 回跳边，子链结束后返回父节点 |
@@ -68,7 +68,7 @@ pipeline-maxhit -task assets/tasks/AutoCollect.json -list-tasks
 ### 参数
 
 | 参数 | 必填 | 说明 |
-|------|------|------|
+| ------ | ------ | ------ |
 | `-pipeline` | 是 | Pipeline JSON 目录路径 |
 | `-entry` | 否* | 入口节点名（覆盖 `-task` 的 entry） |
 | `-task` | 否* | 任务接口 JSON 文件路径 |
@@ -80,7 +80,7 @@ pipeline-maxhit -task assets/tasks/AutoCollect.json -list-tasks
 
 ## 输出
 
-```
+``` text
 Pipeline Max-Exec Analysis
 ==========================
 
@@ -101,7 +101,7 @@ OpenGame                      UINT_MAX            1 Entry
 ### 列说明
 
 | 列 | 说明 |
-|----|------|
+| ---- | ------ |
 | `Node` | 节点名 |
 | `MaxHit` | max_hit 配置（`UINT_MAX` = 无限制） |
 | `MaxExec` | 理论最大执行次数，0 见 Source 列原因 |
