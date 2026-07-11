@@ -50,16 +50,20 @@ pipeline-maxhit -pipeline assets/resource/pipeline -entry OpenGame
 ### 从任务定义读取
 
 ```bash
+# 单个任务（默认取首个）
 pipeline-maxhit -pipeline assets/resource/pipeline -task assets/tasks/ItemTransfer.json
-```
 
-默认取任务文件中首个任务。选项覆盖自动分析——修改图结构（`next` / `recognition` / `action`）的选项按组合枚举，其余乐观并集。进度输出到 stderr，结果输出到 stdout。
-
-指定任务名：
-
-```bash
+# 指定任务名
 pipeline-maxhit -pipeline assets/resource/pipeline -task assets/tasks/AutoCollect.json -task-name AutoCollect
+
+# 逗号分隔多个任务
+pipeline-maxhit -pipeline assets/resource/pipeline -task assets/tasks/AutoCollect.json -task-name AutoCollect,SellProduct
+
+# 运行文件中全部任务
+pipeline-maxhit -pipeline assets/resource/pipeline -task assets/tasks/ItemTransfer.json -task-name all
 ```
+
+选项覆盖自动分析——修改图结构（`next` / `recognition` / `action`）的选项按组合枚举，其余乐观并集。进度输出到 stderr，结果输出到 stdout。
 
 ### 列出任务
 
