@@ -90,6 +90,9 @@ func (fn *FlowNetwork) FlowOnEdge(from, to string) int64 {
 		if e.To != vid {
 			continue
 		}
+		if e.Rev < 0 || e.Rev >= len(fn.Edges) {
+			return 0
+		}
 		return fn.Edges[e.Rev].Cap // reverse residual = forward flow
 	}
 	return 0

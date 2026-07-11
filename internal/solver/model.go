@@ -52,7 +52,7 @@ func (fn *FlowNetwork) AddEdge(from, to string, cap int64) {
 	u := fn.getOrCreate(from)
 	v := fn.getOrCreate(to)
 	fn.Edges = append(fn.Edges, FlowEdge{To: v, Rev: len(fn.Edges) + 1, Cap: cap})
-	fn.Edges = append(fn.Edges, FlowEdge{To: u, Rev: len(fn.Edges) - 2, Cap: 0})
+	fn.Edges = append(fn.Edges, FlowEdge{To: u, Rev: len(fn.Edges) - 1, Cap: 0})
 	fn.Adj[u] = append(fn.Adj[u], len(fn.Edges)-2)
 	fn.Adj[v] = append(fn.Adj[v], len(fn.Edges)-1)
 }
