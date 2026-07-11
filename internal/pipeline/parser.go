@@ -36,15 +36,23 @@ func stripComments(data []byte) []byte {
 			out = append(out, b)
 			continue
 		}
-		if b == '/' && i+1 < len(data) && data[i+1] == '/' {
-			// Line comment — skip to end of line, keep the newline.
-			for i < len(data) && data[i] != '\n' {
-				i++
+		if b == '/' && i+1 < len(data) {
+			if data[i+1] == '/' {
+				for i < len(data) && data[i] != '\n' {
+					i++
+				}
+				if i < len(data) {
+					out = append(out, '\n')
+				}
+				continue
 			}
-			if i < len(data) {
-				out = append(out, '\n')
+			if data[i+1] == '*' {
+				i += 2
+				for i < len(data) && !(data[i-1] == '*' && data[i] == '/') {
+					i++
+				}
+				continue
 			}
-			continue
 		}
 		out = append(out, b)
 	}
