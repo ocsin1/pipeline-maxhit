@@ -254,6 +254,11 @@ func solveAllCombos(base *pipeline.Pipeline, entry string, plan *pipeline.Overri
 	combos := []pipeline.OverrideCombo{{}}
 	if plan != nil {
 		combos = plan.EnumerateCombos()
+		if combos == nil {
+			// Too many combos — fall back to union-only (empty combo).
+			fmt.Fprintf(os.Stderr, "  组合过多，回退到乐观并集\n")
+			combos = []pipeline.OverrideCombo{{}}
+		}
 	}
 
 	var allResults [][]solver.ExecResult
