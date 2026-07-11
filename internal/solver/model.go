@@ -164,21 +164,64 @@ func addJBSupplyEdges(fn *FlowNetwork, g *graph.Graph, jbReachable map[string]bo
 }
 
 func addSinkEdges(fn *FlowNetwork, g *graph.Graph, reachable, jbReachable map[string]bool) {
+	// Compute which nodes can reach a leaf through normal edges (sinkable).
+	// Nodes that cannot reach a leaf need a direct T-edge to prevent flow trapping.
+	canReachLeaf := computeCanReachLeaf(g, reachable)
+
 	for name := range reachable {
-		if !needsSinkEdge(g, name, reachable, jbReachable) {
-			continue
+		if needsSinkEdge(g, name, reachable, canReachLeaf) {
+			fn.AddEdge(nodeOut(name), "__SINK__", MAX_CAP)
 		}
-		fn.AddEdge(nodeOut(name), "__SINK__", MAX_CAP)
 	}
 }
 
-func needsSinkEdge(g *graph.Graph, name string, reachable, jbReachable map[string]bool) bool {
-	hasNormalOut := hasNormalOutgoing(g, name, reachable)
-	if !hasNormalOut {
+// computeCanReachLeaf returns the set of nodes that can reach a leaf
+// through normal edges (i.e. have a path to the sink via children).
+func computeCanReachLeaf(g *graph.Graph, reachable map[string]bool) map[string]bool {
+	canReach := make(map[string]bool)
+
+	// Reverse BFS from leaves.
+	var queue []string
+	for name := range reachable {
+		if !hasNormalOutgoing(g, name, reachable) {
+			canReach[name] = true
+			queue = append(queue, name)
+		}
+	}
+
+	// Reverse adjacency (who points to me through a normal edge).
+	rev := make(map[string][]string)
+	for name := range reachable {
+		for _, e := range g.OutEdges[name] {
+			if e.IsNormal() && reachable[e.To] {
+				rev[e.To] = append(rev[e.To], name)
+			}
+		}
+	}
+
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		for _, pred := range rev[cur] {
+			if canReach[pred] {
+				continue
+			}
+			canReach[pred] = true
+			queue = append(queue, pred)
+		}
+	}
+	return canReach
+}
+
+func needsSinkEdge(g *graph.Graph, name string, reachable, canReachLeaf map[string]bool) bool {
+	if name == g.Entry {
+		return false
+	}
+	if !hasNormalOutgoing(g, name, reachable) {
 		return true // leaf always gets T edge
 	}
-	// Non-leaf jb-supplied nodes (except entry) need T edge for overflow.
-	return jbReachable[name] && name != g.Entry
+	// Non-leaf node: needs T-edge only if it can't reach a leaf through children.
+	return !canReachLeaf[name]
 }
 
 func hasNormalOutgoing(g *graph.Graph, name string, reachable map[string]bool) bool {
