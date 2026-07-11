@@ -186,7 +186,7 @@ func rawHasStructMod(raw json.RawMessage) bool {
 		if err := json.Unmarshal(nodeOverride, &pn); err != nil {
 			continue
 		}
-		if len(pn.Next) > 0 || len(pn.OnError) > 0 || len(pn.Recognition) > 0 || len(pn.Action) > 0 {
+		if len(pn.Next) > 0 || len(pn.OnError) > 0 || len(pn.Recognition) > 0 || len(pn.Action) > 0 || pn.Enabled != nil {
 			return true
 		}
 	}
@@ -328,8 +328,7 @@ func (p *Pipeline) ApplyOverridesUnion(tf *TaskFile, taskName string) {
 	if td == nil {
 		return
 	}
-	// Task-level pipeline_override.
-	if len(td.PipelineOverride) > 0 {
+	if len(td.PipelineOverride) > 0 && !rawHasStructMod(td.PipelineOverride) {
 		mergeOverride(p, td.PipelineOverride)
 	}
 	// All option cases + input-type option-level overrides.
@@ -366,13 +365,12 @@ func collectAllOverrides(tf *TaskFile, optionNames []string) []json.RawMessage {
 			if err := json.Unmarshal(raw, &opt); err != nil {
 				continue
 			}
-			// Option-level override (input/hotkey types).
-			if len(opt.PipelineOverride) > 0 {
+			if len(opt.PipelineOverride) > 0 && !rawHasStructMod(opt.PipelineOverride) {
 				result = append(result, opt.PipelineOverride)
 			}
-			// Case-level overrides.
+			// Case-level overrides (skip struct-mod ones; enum handles them).
 			for _, c := range opt.Cases {
-				if len(c.PipelineOverride) > 0 {
+				if len(c.PipelineOverride) > 0 && !rawHasStructMod(c.PipelineOverride) {
 					result = append(result, c.PipelineOverride)
 				}
 				if len(c.Option) > 0 {
@@ -403,9 +401,8 @@ func (p *Pipeline) mergePartialNode(name string, partial partialNode) {
 	if nd == nil {
 		return
 	}
-	// Enabled: OR.
-	if partial.Enabled != nil && *partial.Enabled {
-		nd.Enabled = true
+	if partial.Enabled != nil {
+		nd.Enabled = *partial.Enabled
 	}
 	// MaxHit: MAX.
 	if partial.MaxHit != nil && *partial.MaxHit > nd.MaxHit {
