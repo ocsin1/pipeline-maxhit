@@ -42,33 +42,38 @@ Go 1.22+，无外部依赖。
 ### 指定入口节点
 
 ```bash
-pipeline-maxhit -pipeline assets/resource/pipeline -entry OpenGame
+pipeline-maxhit -pipeline path/to/pipeline -entry OpenGame
 ```
 
-可选 `-defaults assets/resource/default_pipeline.json` 加载节点默认值。
+默认加载 `default_pipeline.json`（位于 pipeline 目录下）。也可单独指定：`-defaults path/to/default_pipeline.json`。
 
 ### 从任务定义读取
 
+任务接口文件来自 [MaaEnd](https://github.com/MaaEnd/MaaEnd) 仓库 `assets/tasks/`。
+
 ```bash
 # 单个任务（默认取首个）
-pipeline-maxhit -pipeline assets/resource/pipeline -task assets/tasks/ItemTransfer.json
+pipeline-maxhit -pipeline path/to/pipeline -task path/to/tasks/ItemTransfer.json
 
 # 指定任务名
-pipeline-maxhit -pipeline assets/resource/pipeline -task assets/tasks/AutoCollect.json -task-name AutoCollect
+pipeline-maxhit -pipeline path/to/pipeline -task path/to/tasks/AutoCollect.json -task-name AutoCollect
 
 # 逗号分隔多个任务
-pipeline-maxhit -pipeline assets/resource/pipeline -task assets/tasks/AutoCollect.json -task-name AutoCollect,SellProduct
+pipeline-maxhit -pipeline path/to/pipeline -task path/to/tasks/ItemTransfer.json -task-name AutoCollect,SellProduct
 
 # 运行文件中全部任务
-pipeline-maxhit -pipeline assets/resource/pipeline -task assets/tasks/ItemTransfer.json -task-name all
+pipeline-maxhit -pipeline path/to/pipeline -task path/to/tasks/ItemTransfer.json -task-name all
+
+# 运行目录下全部任务文件
+pipeline-maxhit -pipeline path/to/pipeline -task path/to/tasks -all-tasks
 ```
 
-选项覆盖自动分析——修改图结构（`next` / `recognition` / `action`）的选项按组合枚举，其余乐观并集。进度输出到 stderr，结果输出到 stdout。
+进度输出到 stderr，结果输出到 stdout。
 
 ### 列出任务
 
 ```bash
-pipeline-maxhit -task assets/tasks/AutoCollect.json -list-tasks
+pipeline-maxhit -task path/to/tasks/AutoCollect.json -list-tasks
 ```
 
 ### 参数
@@ -77,8 +82,9 @@ pipeline-maxhit -task assets/tasks/AutoCollect.json -list-tasks
 | ------ | ------ | ------ |
 | `-pipeline` | 是 | Pipeline JSON 目录路径 |
 | `-entry` | 否* | 入口节点名（覆盖 `-task` 的 entry） |
-| `-task` | 否* | 任务接口 JSON 文件路径 |
-| `-task-name` | 否 | 任务名（默认取文件首个任务） |
+| `-task` | 否* | 任务接口 JSON 文件或目录路径 |
+| `-task-name` | 否 | 任务名，逗号分隔多个，`all` 运行全部 |
+| `-all-tasks` | 否 | 运行目录中所有任务文件中的所有任务 |
 | `-defaults` | 否 | `default_pipeline.json` 路径 |
 | `-list-tasks` | 否 | 列出任务后退出 |
 

@@ -8,9 +8,9 @@
             "mode": "debug",
             "program": "${workspaceFolder}/install",
             "args": [
-                "-pipeline", "assets/resource/pipeline",
+                "-pipeline", "path/to/pipeline",
                 "-entry", "OpenGame",
-                "-defaults", "assets/resource/default_pipeline.json"
+                "-defaults", "path/to/default_pipeline.json"
             ],
             "cwd": "${workspaceFolder}"
         }
