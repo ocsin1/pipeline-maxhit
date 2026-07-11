@@ -71,8 +71,6 @@ func (g *Graph) shouldSkipEdge(item pipeline.NextItem) bool {
 	return target.Pipeline.RecogClass == pipeline.RecogInvisible
 }
 
-// --- StopTask handling ---
-
 func (g *Graph) removeStopTaskEdges() {
 	for name, info := range g.Nodes {
 		if !info.Pipeline.IsStopTask() {
@@ -83,8 +81,6 @@ func (g *Graph) removeStopTaskEdges() {
 		}
 	}
 }
-
-// --- Blocker preprocessing ---
 
 const maxUint32 = uint64(^uint32(0))
 
@@ -142,7 +138,6 @@ func (g *Graph) removeBlockedEdges(uName string, ordered []Edge, blockerIdx int)
 	blockerNode := g.Nodes[blockerEdge.To]
 
 	if !blockerEdge.IsJumpBack() {
-		// Non-jb DirectHit: captures the ONE normal hit. ALL later nodes unreachable.
 		for i := blockerIdx + 1; i < len(ordered); i++ {
 			g.removeEdge(uName, ordered[i])
 		}
@@ -150,17 +145,14 @@ func (g *Graph) removeBlockedEdges(uName string, ordered []Edge, blockerIdx int)
 	}
 
 	if blockerNode.Pipeline.MaxHitOrDefault() >= maxUint32 {
-		// Jb DirectHit, unlimited: captures every jb-return. Later non-jb unreachable.
 		for i := blockerIdx + 1; i < len(ordered); i++ {
 			if !ordered[i].IsJumpBack() {
 				g.removeEdge(uName, ordered[i])
 			}
 		}
 	}
-	// Jb DirectHit with finite max_hit: keep later edges (optimistic).
-}
 
-// --- Edge helpers ---
+}
 
 func (e Edge) IsJumpBack() bool {
 	return e.Kind == pipeline.EdgeNextJumpBack || e.Kind == pipeline.EdgeOnErrorJumpBack
@@ -194,8 +186,6 @@ func (g *Graph) removeFromInEdges(to, from string, kind pipeline.EdgeKind) {
 		}
 	}
 }
-
-// --- Reachability ---
 
 func (g *Graph) RecomputeReachability() { g.computeReachability() }
 func (g *Graph) ReapplyBlockerPreprocessing() { g.applyBlockerPreprocessing() }

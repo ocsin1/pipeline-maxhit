@@ -68,12 +68,8 @@ func toCap(maxHit uint64) int64 {
 	return cap
 }
 
-// BuildFlowNetwork constructs the max-flow network:
-//   - Node splitting: v_in -> v_out, capacity = max_hit[v]
-//   - Source -> entry_in: capacity 1 (bootstrap)
-//   - Source -> v_in: capacity max_hit[v] for jb-reachable nodes (free budget)
-//   - Normal edges p_out -> v_in: INF capacity
-//   - Sink edges for leaves and jb-supplied non-leaves
+// BuildFlowNetwork builds the Dinic max-flow network with node splitting,
+// entry bootstrap, JB supply edges, normal edges, and sink edges.
 func BuildFlowNetwork(g *graph.Graph) *FlowNetwork {
 	fn := NewFlowNetwork()
 
@@ -128,7 +124,6 @@ func computeJBReachable(g *graph.Graph, reachable map[string]bool) map[string]bo
 	jb[g.Entry] = true
 	queue = append(queue, g.Entry)
 
-	// Seed: direct jb edges from reachable nodes.
 	for _, edges := range g.OutEdges {
 		for _, e := range edges {
 			if !e.IsJumpBack() || !reachable[e.From] || !reachable[e.To] || jb[e.To] {
@@ -139,7 +134,6 @@ func computeJBReachable(g *graph.Graph, reachable map[string]bool) map[string]bo
 		}
 	}
 
-	// BFS through jb edges (jb chain propagation).
 	for len(queue) > 0 {
 		cur := queue[0]
 		queue = queue[1:]
@@ -164,8 +158,8 @@ func addJBSupplyEdges(fn *FlowNetwork, g *graph.Graph, jbReachable map[string]bo
 }
 
 func addSinkEdges(fn *FlowNetwork, g *graph.Graph, reachable, jbReachable map[string]bool) {
-	// Compute which nodes can reach a leaf through normal edges (sinkable).
-	// Nodes that cannot reach a leaf need a direct T-edge to prevent flow trapping.
+	// Nodes that cannot reach a leaf through normal edges need a direct T-edge
+	// to prevent flow from being trapped with no path to the sink.
 	canReachLeaf := computeCanReachLeaf(g, reachable)
 
 	for name := range reachable {
@@ -180,7 +174,6 @@ func addSinkEdges(fn *FlowNetwork, g *graph.Graph, reachable, jbReachable map[st
 func computeCanReachLeaf(g *graph.Graph, reachable map[string]bool) map[string]bool {
 	canReach := make(map[string]bool)
 
-	// Reverse BFS from leaves.
 	var queue []string
 	for name := range reachable {
 		if !hasNormalOutgoing(g, name, reachable) {
@@ -189,7 +182,6 @@ func computeCanReachLeaf(g *graph.Graph, reachable map[string]bool) map[string]b
 		}
 	}
 
-	// Reverse adjacency (who points to me through a normal edge).
 	rev := make(map[string][]string)
 	for name := range reachable {
 		for _, e := range g.OutEdges[name] {
@@ -215,10 +207,8 @@ func computeCanReachLeaf(g *graph.Graph, reachable map[string]bool) map[string]b
 
 func needsSinkEdge(g *graph.Graph, name string, reachable, canReachLeaf map[string]bool) bool {
 	if !hasNormalOutgoing(g, name, reachable) {
-		return true // leaf always gets T edge
+		return true
 	}
-	// Non-leaf node: needs T-edge only if flow can't reach a leaf through children.
-	// This includes the entry node when all its children are saturated (e.g. by JB supply).
 	return !canReachLeaf[name]
 }
 
@@ -230,8 +220,6 @@ func hasNormalOutgoing(g *graph.Graph, name string, reachable map[string]bool) b
 	}
 	return false
 }
-
-// SCC analysis below (diagnostic only).
 
 type SCCResult struct {
 	Components [][]string

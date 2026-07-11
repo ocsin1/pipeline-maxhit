@@ -39,9 +39,7 @@ func Print(w io.Writer, tasks []TaskResult, sccWarnings []string, reachableByTas
 	}
 }
 
-// printSCCWarnings shows SCC warnings filtered to nodes reachable in any task.
 func printSCCWarnings(w io.Writer, warnings []string, reachableByTask map[string]map[string]bool, tasks []TaskResult) {
-	// Collect union of all reachable node names across tasks.
 	allReachable := make(map[string]bool)
 	for _, tr := range tasks {
 		for _, r := range tr.Results {
@@ -51,7 +49,6 @@ func printSCCWarnings(w io.Writer, warnings []string, reachableByTask map[string
 		}
 	}
 
-	// For each SCC warning, check if any node in the SCC is reachable.
 	var relevant []string
 	for _, warn := range warnings {
 		if sccOverlaps(warn, allReachable) {
@@ -67,7 +64,6 @@ func printSCCWarnings(w io.Writer, warnings []string, reachableByTask map[string
 	fmt.Fprintln(w)
 }
 
-// sccOverlaps checks if any node mentioned in the warning is in the reachable set.
 func sccOverlaps(warn string, reachable map[string]bool) bool {
 	// Warning format: "SCC with unbounded max_hit: NodeA, NodeB, ..."
 	prefix := "SCC with unbounded max_hit: "

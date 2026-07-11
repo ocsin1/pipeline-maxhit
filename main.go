@@ -22,13 +22,11 @@ func main() {
 	base := parseBasePipeline(cfg)
 	allFinal := runAllTasks(base, cfg)
 
-	// Compute SCC warnings (global, filtered per task at print time).
 	var sccWarnings []string
 	if len(allFinal) > 0 {
 		sccWarnings = solver.FindSCCs(graph.Build(base, allFinal[0].Entry)).Warnings
 	}
 
-	// Collect reachable nodes per task for SCC filtering.
 	reachableByTask := make(map[string]map[string]bool)
 	for _, tr := range allFinal {
 		names := make(map[string]bool)
@@ -47,8 +45,6 @@ func main() {
 	report.Print(os.Stdout, allFinal, sccWarnings, reachableByTask, opts)
 }
 
-// --- task plan ---
-
 type taskPlan struct {
 	Name    string
 	Entry   string
@@ -56,8 +52,6 @@ type taskPlan struct {
 	TaskDef *pipeline.TaskDef
 	TF      *pipeline.TaskFile
 }
-
-// --- config ---
 
 type config struct {
 	pipelineDir  string
@@ -119,8 +113,6 @@ func parseFlags() *config {
 	return cfg
 }
 
-// --- pipeline ---
-
 func parseBasePipeline(cfg *config) *pipeline.Pipeline {
 	p, err := pipeline.ParsePipeline(cfg.pipelineDir, cfg.defaults)
 	if err != nil {
@@ -140,14 +132,11 @@ func mustParseTask(path string) *pipeline.TaskFile {
 	return tf
 }
 
-// --- run all tasks ---
-
 func runAllTasks(base *pipeline.Pipeline, cfg *config) []report.TaskResult {
 	if len(cfg.taskFiles) == 0 {
 		return []report.TaskResult{runOne(base, cfg.entry, cfg.entry, nil, nil)}
 	}
 
-	// Collect all task files (expand directories).
 	var files []string
 	for _, path := range cfg.taskFiles {
 		info, err := os.Stat(path)
@@ -275,8 +264,6 @@ func runOne(base *pipeline.Pipeline, taskName, entry string, plan *pipeline.Over
 	return report.TaskResult{Name: taskName, Entry: entry, Results: merged}
 }
 
-// --- solve ---
-
 func solveAllCombos(base *pipeline.Pipeline, entry string, plan *pipeline.OverridePlan) [][]solver.ExecResult {
 	combos := []pipeline.OverrideCombo{{}}
 	if plan != nil {
@@ -317,12 +304,10 @@ func mergeResults(all [][]solver.ExecResult) []solver.ExecResult {
 	if len(all) == 0 {
 		return nil
 	}
-	// Build name-indexed map from the first batch.
 	byName := make(map[string]*solver.ExecResult, len(all[0]))
 	for i := range all[0] {
 		byName[all[0][i].Name] = &all[0][i]
 	}
-	// Merge subsequent batches by name.
 	for _, batch := range all[1:] {
 		for i := range batch {
 			if cur, ok := byName[batch[i].Name]; ok {
@@ -339,8 +324,6 @@ func mergeResults(all [][]solver.ExecResult) []solver.ExecResult {
 	}
 	return result
 }
-
-// --- helpers ---
 
 func clonePipeline(p *pipeline.Pipeline) *pipeline.Pipeline {
 	clone := &pipeline.Pipeline{
