@@ -10,6 +10,46 @@ import (
 )
 
 // ParseNextItem parses a raw next-list entry which can be:
+func stripComments(data []byte) []byte {
+	var out []byte
+	inString := false
+	escaped := false
+
+	for i := 0; i < len(data); i++ {
+		b := data[i]
+		if escaped {
+			out = append(out, b)
+			escaped = false
+			continue
+		}
+		if inString {
+			out = append(out, b)
+			if b == '\\' {
+				escaped = true
+			} else if b == '"' {
+				inString = false
+			}
+			continue
+		}
+		if b == '"' {
+			inString = true
+			out = append(out, b)
+			continue
+		}
+		if b == '/' && i+1 < len(data) && data[i+1] == '/' {
+			// Line comment — skip to end of line, keep the newline.
+			for i < len(data) && data[i] != '\n' {
+				i++
+			}
+			if i < len(data) {
+				out = append(out, '\n')
+			}
+			continue
+		}
+		out = append(out, b)
+	}
+	return out
+}
 //   - "[JumpBack]NodeName"
 //   - "[Anchor]AnchorName"
 //   - "[JumpBack][Anchor]Name"
