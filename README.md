@@ -42,10 +42,10 @@ Go 1.22+，无外部依赖。
 ### 指定入口节点
 
 ```bash
-pipeline-maxhit -pipeline path/to/pipeline -entry OpenGame
+pipeline-maxhit -pipeline assets/resource/pipeline -entry OpenGame
 ```
 
-默认加载 `default_pipeline.json`（位于 pipeline 目录下）。也可单独指定：`-defaults path/to/default_pipeline.json`。
+默认加载 `default_pipeline.json`（位于 pipeline 目录下）。也可单独指定：`-defaults assets/resource/default_pipeline.json`。
 
 ### 从任务定义读取
 
@@ -53,19 +53,19 @@ pipeline-maxhit -pipeline path/to/pipeline -entry OpenGame
 
 ```bash
 # 单个任务（默认取首个）
-pipeline-maxhit -pipeline path/to/pipeline -task path/to/tasks/ItemTransfer.json
+pipeline-maxhit -pipeline assets/resource/pipeline -task assets/tasks/ItemTransfer.json
 
 # 指定任务名
-pipeline-maxhit -pipeline path/to/pipeline -task path/to/tasks/AutoCollect.json -task-name AutoCollect
+pipeline-maxhit -pipeline assets/resource/pipeline -task assets/tasks/AutoCollect.json -task-name AutoCollect
 
 # 逗号分隔多个任务
-pipeline-maxhit -pipeline path/to/pipeline -task path/to/tasks/ItemTransfer.json -task-name AutoCollect,SellProduct
+pipeline-maxhit -pipeline assets/resource/pipeline -task assets/tasks/ItemTransfer.json -task-name AutoCollect,SellProduct
 
 # 运行文件中全部任务
-pipeline-maxhit -pipeline path/to/pipeline -task path/to/tasks/ItemTransfer.json -task-name all
+pipeline-maxhit -pipeline assets/resource/pipeline -task assets/tasks/ItemTransfer.json -task-name all
 
 # 运行目录下全部任务文件
-pipeline-maxhit -pipeline path/to/pipeline -task path/to/tasks -all-tasks
+pipeline-maxhit -pipeline assets/resource/pipeline -task assets/tasks -all-tasks
 ```
 
 进度输出到 stderr，结果输出到 stdout。
@@ -73,7 +73,7 @@ pipeline-maxhit -pipeline path/to/pipeline -task path/to/tasks -all-tasks
 ### 列出任务
 
 ```bash
-pipeline-maxhit -task path/to/tasks/AutoCollect.json -list-tasks
+pipeline-maxhit -task assets/tasks/AutoCollect.json -list-tasks
 ```
 
 ### 参数
