@@ -1,8 +1,5 @@
 # Binary (Windows: .exe, Linux/macOS: no extension)
-/install/pipeline-maxhit
-/install/pipeline-maxhit.exe
-/pipeline-maxhit
-/pipeline-maxhit.exe
+/install
 
 # IDE
 .idea/
