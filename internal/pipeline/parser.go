@@ -271,8 +271,7 @@ func ParsePipeline(pipelineDir string, defaultsPath string) (*Pipeline, error) {
 		}
 
 		var rawNodes map[string]rawNode
-		if err := json.Unmarshal(data, &rawNodes); err != nil {
-			// Skip files that aren't pipeline JSON (e.g. store.json, config files)
+		if err := json.Unmarshal(stripComments(data), &rawNodes); err != nil {
 			return nil
 		}
 
