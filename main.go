@@ -42,25 +42,24 @@ type config struct {
 	pipelineDir string
 	defaults    string
 	entry       string
-	taskFile    string
+	taskFiles   []string // paths to task JSON files (or directories)
 	taskNames   []string
 	allTasks    bool
+	allDirs     bool // scan all task files in directories
 }
 
 func parseFlags() *config {
 	pipelineDir := flag.String("pipeline", "", "Pipeline JSON 目录路径")
 	defaults := flag.String("defaults", "", "default_pipeline.json 路径")
 	entry := flag.String("entry", "", "入口节点名")
-	task := flag.String("task", "", "任务接口 JSON 文件路径")
-	taskName := flag.String("task-name", "", "任务名，逗号分隔多个，\"all\" 运行全部")
+	task := flag.String("task", "", "任务接口 JSON 文件或目录路径")
+	taskName := flag.String("task-name", "", "任务名，逗号分隔，\"all\" 运行全部")
+	allTasks := flag.Bool("all-tasks", false, "运行所有任务文件中的所有任务")
 	listTasks := flag.Bool("list-tasks", false, "列出任务后退出")
 	flag.Parse()
 
 	if *task != "" && *listTasks {
-		tf := mustParseTask(*task)
-		for _, t := range tf.Tasks {
-			fmt.Printf("  %s (entry: %s)\n", t.Name, t.Entry)
-		}
+		listTaskEntries(*task)
 		return nil
 	}
 
@@ -68,7 +67,11 @@ func parseFlags() *config {
 		pipelineDir: *pipelineDir,
 		defaults:    *defaults,
 		entry:       *entry,
-		taskFile:    *task,
+		allDirs:     *allTasks,
+	}
+
+	if *task != "" {
+		cfg.taskFiles = append(cfg.taskFiles, *task)
 	}
 
 	if *taskName == "all" {
@@ -82,8 +85,8 @@ func parseFlags() *config {
 		}
 	}
 
-	if cfg.pipelineDir == "" || (cfg.entry == "" && cfg.taskFile == "") {
-		fmt.Fprintf(os.Stderr, "用法: pipeline-maxhit -pipeline <dir> (-entry <node> | -task <file>)\n")
+	if cfg.pipelineDir == "" || (cfg.entry == "" && len(cfg.taskFiles) == 0) {
+		fmt.Fprintf(os.Stderr, "用法: pipeline-maxhit -pipeline <dir> (-entry <node> | -task <file|dir>)\n")
 		os.Exit(1)
 	}
 	return cfg
@@ -113,21 +116,78 @@ func mustParseTask(path string) *pipeline.TaskFile {
 // --- run all tasks ---
 
 func runAllTasks(base *pipeline.Pipeline, cfg *config) []report.TaskResult {
-	if cfg.taskFile == "" {
-		// Single entry, no task file.
+	if len(cfg.taskFiles) == 0 {
 		return []report.TaskResult{runOne(base, cfg.entry, cfg.entry, nil, nil)}
 	}
 
-	tf := mustParseTask(cfg.taskFile)
-	plans := resolvePlans(tf, cfg)
+	// Collect all task files (expand directories).
+	var files []string
+	for _, path := range cfg.taskFiles {
+		info, err := os.Stat(path)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "跳过: %s (%v)\n", path, err)
+			continue
+		}
+		if info.IsDir() {
+			entries, _ := os.ReadDir(path)
+			for _, e := range entries {
+				if !e.IsDir() && strings.HasSuffix(e.Name(), ".json") {
+					files = append(files, path+"/"+e.Name())
+				}
+			}
+		} else {
+			files = append(files, path)
+		}
+	}
+
+	if cfg.allDirs {
+		cfg.allTasks = true
+	}
 
 	var results []report.TaskResult
-	for i, tp := range plans {
-		fmt.Fprintf(os.Stderr, "\n任务 %d/%d: %s\n", i+1, len(plans), tp.Name)
-		tr := runOne(base, tp.Name, tp.Entry, tp.Plan, tp.TF)
-		results = append(results, tr)
+	for fi, f := range files {
+		tf := mustParseTask(f)
+		plans := resolvePlans(tf, cfg)
+
+		for _, tp := range plans {
+			fmt.Fprintf(os.Stderr, "\n[%d/%d] %s (%s)\n", fi+1, len(files), tp.Name, f)
+			tr := runOne(base, tp.Name, tp.Entry, tp.Plan, tp.TF)
+			results = append(results, tr)
+		}
 	}
 	return results
+}
+
+func listTaskEntries(path string) {
+	tfs := mustParseTaskFiles(path)
+	for _, tf := range tfs {
+		for _, t := range tf.Tasks {
+			fmt.Printf("  %s (entry: %s)\n", t.Name, t.Entry)
+		}
+	}
+}
+
+func mustParseTaskFiles(path string) []*pipeline.TaskFile {
+	info, err := os.Stat(path)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "错误: %v\n", err)
+		os.Exit(1)
+	}
+	if info.IsDir() {
+		entries, err := os.ReadDir(path)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "错误: %v\n", err)
+			os.Exit(1)
+		}
+		var tfs []*pipeline.TaskFile
+		for _, e := range entries {
+			if !e.IsDir() && strings.HasSuffix(e.Name(), ".json") {
+				tfs = append(tfs, mustParseTask(path+"/"+e.Name()))
+			}
+		}
+		return tfs
+	}
+	return []*pipeline.TaskFile{mustParseTask(path)}
 }
 
 func resolvePlans(tf *pipeline.TaskFile, cfg *config) []taskPlan {
