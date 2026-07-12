@@ -61,8 +61,8 @@ type config struct {
 	taskNames    []string
 	allTasks     bool
 	allDirs      bool // scan all task files in directories
-	showAllNodes bool // include unreachable nodes in output
-	showSCC      bool // print SCC warnings
+	showAllNodes  bool // include unreachable nodes in output
+	showSCC       bool // print SCC warnings
 }
 
 func parseFlags() *config {
@@ -253,51 +253,66 @@ func resolvePlans(tf *pipeline.TaskFile, cfg *config) []taskPlan {
 }
 
 func runOne(base *pipeline.Pipeline, taskName, entry string, plan *pipeline.OverridePlan, tf *pipeline.TaskFile) report.TaskResult {
-	p := clonePipeline(base)
+	// Step 1: solve the union graph once WITH branching resolution.
+	pUnion := clonePipeline(base)
 	if plan != nil {
 		fmt.Fprintf(os.Stderr, "  覆盖组合: %d\n", len(plan.EnumerateCombos()))
-		p.ApplyOverridesUnion(tf, taskName)
+		pUnion.ApplyOverridesUnion(tf, taskName)
 	}
+	unionResults := solveOneGraph(pUnion, entry, true) // with branching
 
-	allResults := solveAllCombos(p, entry, plan)
-	merged := mergeResults(allResults)
-	return report.TaskResult{Name: taskName, Entry: entry, Results: merged}
-}
-
-func solveAllCombos(base *pipeline.Pipeline, entry string, plan *pipeline.OverridePlan) [][]solver.ExecResult {
+	// Step 2: solve each combo WITHOUT branching resolution.
 	combos := []pipeline.OverrideCombo{{}}
 	if plan != nil {
 		combos = plan.EnumerateCombos()
 		if combos == nil {
-			// Too many combos — fall back to union-only (empty combo).
 			fmt.Fprintf(os.Stderr, "  组合过多，回退到乐观并集\n")
 			combos = []pipeline.OverrideCombo{{}}
 		}
 	}
 
-	var allResults [][]solver.ExecResult
+	allResults := [][]solver.ExecResult{unionResults}
 	for i, combo := range combos {
 		p := clonePipeline(base)
 		p.ApplyCombo(combo)
-
-		g := graph.Build(p, entry)
-		graph.ResolveAnchors(g)
-		g.ReapplyBlockerPreprocessing()
-		g.RecomputeReachability()
-
-		fn := solver.BuildFlowNetwork(g)
-		fn.MaxFlow()
-		results := solver.ExtractResults(fn, g)
-
-		if len(combos) > 1 {
-			fmt.Fprintf(os.Stderr, "  组合 %d/%d: %d 可达          \r", i+1, len(combos), countReachable(g))
-		}
+		results := solveOneGraph(p, entry, false) // no branching per combo
 		allResults = append(allResults, results)
+		if len(combos) > 1 {
+			fmt.Fprintf(os.Stderr, "  组合 %d/%d: %d 可达          \r", i+1, len(combos), countReachableResults(results))
+		}
 	}
 	if len(combos) > 1 {
 		fmt.Fprintln(os.Stderr)
 	}
-	return allResults
+
+	merged := mergeResults(allResults)
+	return report.TaskResult{Name: taskName, Entry: entry, Results: merged}
+}
+
+// solveOneGraph builds the graph, runs max-flow, and optionally branching resolution.
+func solveOneGraph(p *pipeline.Pipeline, entry string, withBranching bool) []solver.ExecResult {
+	g := graph.Build(p, entry)
+	graph.ResolveAnchors(g)
+	g.ReapplyBlockerPreprocessing()
+	g.RecomputeReachability()
+
+	fn := solver.BuildFlowNetwork(g)
+	fn.MaxFlow()
+	results := solver.ExtractResults(fn, g)
+	if withBranching {
+		results = solver.ResolveBranching(g, results)
+	}
+	return results
+}
+
+func countReachableResults(results []solver.ExecResult) int {
+	count := 0
+	for _, r := range results {
+		if r.Reachable {
+			count++
+		}
+	}
+	return count
 }
 
 func mergeResults(all [][]solver.ExecResult) []solver.ExecResult {
@@ -345,12 +360,3 @@ func clonePipeline(p *pipeline.Pipeline) *pipeline.Pipeline {
 	return clone
 }
 
-func countReachable(g *graph.Graph) int {
-	count := 0
-	for _, info := range g.Nodes {
-		if info.Reachable {
-			count++
-		}
-	}
-	return count
-}
